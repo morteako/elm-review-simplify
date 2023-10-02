@@ -6356,7 +6356,6 @@ getChecks collection checkInfo =
         , \() ->
             Evaluate.getInt checkInfo checkInfo.firstArg
                 |> Maybe.andThen (indexAccessChecks collection checkInfo)
-
         ]
         ()
 
@@ -6374,72 +6373,73 @@ indexAccessChecks collection checkInfo n =
         case secondArg checkInfo of
             Just arg ->
                 firstThatConstructsJust
-                [\() ->
-                    case collection.literalElements checkInfo.lookupTable arg of
-                        Just literalElements ->
-                            case List.drop n literalElements |> List.head of
-                                Just element ->
-                                    Just
-                                        (Rule.errorWithFix
-                                            { message = "The element returned by " ++ qualifiedToString checkInfo.fn ++ " is known"
-                                            , details = [ "You can replace this call by Just the targeted element." ]
-                                            }
-                                            checkInfo.fnRange
-                                            (replaceBySubExpressionFix (Node.range arg) element
-                                                ++ [ Fix.replaceRangeBy (Range.combine [ checkInfo.fnRange, Node.range checkInfo.firstArg ])
-                                                        (qualifiedToString (qualify ( [ "Maybe" ], "Just" ) checkInfo))
-                                                   ]
+                    [ \() ->
+                        case collection.literalElements checkInfo.lookupTable arg of
+                            Just literalElements ->
+                                case List.drop n literalElements |> List.head of
+                                    Just element ->
+                                        Just
+                                            (Rule.errorWithFix
+                                                { message = "The element returned by " ++ qualifiedToString checkInfo.fn ++ " is known"
+                                                , details = [ "You can replace this call by Just the targeted element." ]
+                                                }
+                                                checkInfo.fnRange
+                                                (replaceBySubExpressionFix (Node.range arg) element
+                                                    ++ [ Fix.replaceRangeBy (Range.combine [ checkInfo.fnRange, Node.range checkInfo.firstArg ])
+                                                            (qualifiedToString (qualify ( [ "Maybe" ], "Just" ) checkInfo))
+                                                       ]
+                                                )
                                             )
-                                        )
 
-                                Nothing ->
-                                    Just
-                                        (Rule.errorWithFix
-                                            { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
-                                            , details = [ "You can replace this call by Nothing." ]
-                                            }
-                                            checkInfo.fnRange
-                                            [ Fix.replaceRangeBy checkInfo.parentRange (qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)) ]
-                                        )
+                                    Nothing ->
+                                        Just
+                                            (Rule.errorWithFix
+                                                { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
+                                                , details = [ "You can replace this call by Nothing." ]
+                                                }
+                                                checkInfo.fnRange
+                                                [ Fix.replaceRangeBy checkInfo.parentRange (qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)) ]
+                                            )
 
-                        Nothing ->
-                            Nothing
-                    ,
-                     \() ->
-                        case (AstHelpers.getSpecificFunctionCall (["Array"],"repeat") checkInfo.lookupTable arg) of
-                         Just repeatCall ->
-                             case List.head repeatCall.argsAfterFirst of
-                                 Just repeatSecondArg ->
-                                     case (Evaluate.getInt checkInfo repeatCall.firstArg)  of
-                                             Just int ->
-                                                 if n < int then
-                                                 Just (Rule.errorWithFix
-                                                     { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
-                                                     , details = [ "You can replace this call by Nothing." ]
-                                                     }
-                                                     checkInfo.fnRange
-                                                      [ Fix.replaceRangeBy checkInfo.parentRange
-                                                        (qualifiedToString (qualify ( [ "Maybe" ], "Just" ) checkInfo) ++ " " ++ checkInfo.extractSourceCode (Node.range repeatSecondArg)) ]
-                                                 )
-                                                 else
-                                                     Just (Rule.errorWithFix
-                                                         { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
-                                                         , details = [ "You can replace this call by Nothing." ]
-                                                         }
-                                                         checkInfo.fnRange
-                                                          [ Fix.replaceRangeBy checkInfo.parentRange
-                                                            (qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo))  ]
-                                                     )
+                            Nothing ->
+                                Nothing
+                    , \() ->
+                        AstHelpers.getSpecificFunctionCall ( [ "Array" ], "repeat" ) checkInfo.lookupTable arg
+                            |> Maybe.andThen
+                                (\repeatCall ->
+                                    List.head repeatCall.argsAfterFirst
+                                        |> Maybe.andThen
+                                            (\repeatSecondArg ->
+                                                case Evaluate.getInt checkInfo repeatCall.firstArg of
+                                                    Just repeatArgInt ->
+                                                        if n < repeatArgInt then
+                                                            Just
+                                                                (Rule.errorWithFix
+                                                                    { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
+                                                                    , details = [ "You can replace this call by Nothing." ]
+                                                                    }
+                                                                    checkInfo.fnRange
+                                                                    [ Fix.replaceRangeBy checkInfo.parentRange
+                                                                        (qualifiedToString (qualify ( [ "Maybe" ], "Just" ) checkInfo) ++ " " ++ checkInfo.extractSourceCode (Node.range repeatSecondArg))
+                                                                    ]
+                                                                )
 
-                                             Nothing ->
-                                                Nothing
+                                                        else
+                                                            Just
+                                                                (Rule.errorWithFix
+                                                                    { message = qualifiedToString checkInfo.fn ++ " with an index out of bounds of the given " ++ collection.represents ++ " will always return " ++ qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo)
+                                                                    , details = [ "You can replace this call by Nothing." ]
+                                                                    }
+                                                                    checkInfo.fnRange
+                                                                    [ Fix.replaceRangeBy checkInfo.parentRange
+                                                                        (qualifiedToString (qualify ( [ "Maybe" ], "Nothing" ) checkInfo))
+                                                                    ]
+                                                                )
 
-                                 Nothing ->
-                                    Nothing
-
-
-
-                         Nothing -> Nothing
+                                                    Nothing ->
+                                                        Nothing
+                                            )
+                                )
                     ]
                     ()
 
