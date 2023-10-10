@@ -7139,14 +7139,16 @@ listDropChecks =
     firstThatConstructsJust
         [ \checkInfo ->
             case Evaluate.getInt checkInfo checkInfo.firstArg of
-                Just 0 ->
-                    Just
-                        (alwaysReturnsLastArgError
-                            (qualifiedToString checkInfo.fn ++ " 0")
-                            { represents = "list" }
-                            checkInfo
-                        )
-
+                Just n ->
+                    if n <= 0 then
+                        Just
+                            (alwaysReturnsLastArgError
+                                (qualifiedToString checkInfo.fn ++ " " ++ String.fromInt n)
+                                { represents = "list" }
+                                checkInfo
+                            )
+                    else
+                        Nothing
                 _ ->
                     Nothing
         , unnecessaryCallOnEmptyCheck listCollection

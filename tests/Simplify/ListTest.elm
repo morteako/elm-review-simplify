@@ -7126,6 +7126,23 @@ a = List.drop 0 list
 a = list
 """
                         ]
+        , test "should replace List.drop -1 list by list" <|
+                    \() ->
+                        """module A exposing (..)
+a = List.drop -1 list
+"""
+                            |> Review.Test.run ruleWithDefaults
+                            |> Review.Test.expectErrors
+                                [ Review.Test.error
+                                    { message = "List.drop -1 will always return the same given list"
+                                    , details = [ "You can replace this call by the list itself." ]
+                                    , under = "List.drop"
+                                    }
+                                    |> Review.Test.whenFixed """module A exposing (..)
+a = list
+"""
+                                ]
+
         , test "should replace list |> List.drop 0 by list" <|
             \() ->
                 """module A exposing (..)
