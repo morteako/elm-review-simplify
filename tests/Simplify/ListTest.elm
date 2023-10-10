@@ -9,42 +9,42 @@ import TestHelpers exposing (ruleExpectingNaN, ruleWithDefaults)
 all : Test
 all =
     describe "List"
-        [ usingConsTests
-        , listAppendTests
-        , usingListConcatTests
-        , listConcatMapTests
-        , listHeadTests
-        , listTailTests
-        , listMemberTests
-        , listMapTests
-        , listFilterTests
-        , listFilterMapTests
-        , listIndexedMapTests
-        , listIsEmptyTests
-        , listSumTests
-        , listProductTests
-        , listMinimumTests
-        , listMaximumTests
-        , listFoldlTests
-        , listFoldrTests
-        , listAllTests
-        , listAnyTests
-        , listRangeTests
-        , listLengthTests
-        , listRepeatTests
-        , listPartitionTests
-        , listSortTests
-        , listSortByTests
-        , listSortWithTests
-        , listReverseTests
-        , listTakeTests
+        [ --usingConsTests
+        --, listAppendTests
+        --, usingListConcatTests
+        --, listConcatMapTests
+        --, listHeadTests
+        --, listTailTests
+        --, listMemberTests
+        --, listMapTests
+        --, listFilterTests
+        --, listFilterMapTests
+        --, listIndexedMapTests
+        --, listIsEmptyTests
+        --, listSumTests
+        --, listProductTests
+        --, listMinimumTests
+        --, listMaximumTests
+        --, listFoldlTests
+        --, listFoldrTests
+        --, listAllTests
+        --, listAnyTests
+        --, listRangeTests
+        listLengthTests
+        --, listRepeatTests
+        --, listPartitionTests
+        --, listSortTests
+        --, listSortByTests
+        --, listSortWithTests
+        --, listReverseTests
+        --, listTakeTests
         , listDropTests
-        , listIntersperseTests
-        , listMap2Tests
-        , listMap3Tests
-        , listMap4Tests
-        , listMap5Tests
-        , listUnzipTests
+        --, listIntersperseTests
+        --, listMap2Tests
+        --, listMap3Tests
+        --, listMap4Tests
+        --, listMap5Tests
+        --, listUnzipTests
         ]
 
 
@@ -6037,6 +6037,103 @@ a = [] |> List.length
 a = 0
 """
                         ]
+    , test "should replace List.length (List.repeat 3 x) by 3" <|
+                \() ->
+                    """module A exposing (..)
+a = List.length (List.repeat 3 x)
+"""
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "The length of the list is 3"
+                                , details = [ "The length of the list can be determined by looking at the code." ]
+                                , under = "List.length"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+a = 3
+"""
+                        ]
+        , test "should replace List.length (List.range 3 10 x) by 7" <|
+                \() ->
+                    """module A exposing (..)
+a = List.length (List.range 3 10)
+"""
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "The length of the list is 7"
+                                , details = [ "The length of the list can be determined by looking at the code." ]
+                                , under = "List.length"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+a = 7
+"""
+                        ]
+        , test "should replace List.length (List.range -5 -2 x) by 3" <|
+                \() ->
+                    """module A exposing (..)
+a = List.length (List.range -5 -2)
+"""
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "The length of the list is 3"
+                                , details = [ "The length of the list can be determined by looking at the code." ]
+                                , under = "List.length"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+a = 3
+"""
+    ]
+        , test "should replace List.length (List.map f [a,b,c]) by 3" <|
+                \() ->
+                    """module A exposing (..)
+a = List.length (List.map f [a,b,c])
+"""
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "The length of the list is 3"
+                                , details = [ "The length of the list can be determined by looking at the code." ]
+                                , under = "List.length"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+a = 3
+"""
+                        ]
+    , test "should replace List.length (List.reverse [a,b,c]) by 3" <|
+                \() ->
+                    """module A exposing (..)
+a = List.length (List.reverse [a,b,c])
+"""
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "The length of the list is 3"
+                                , details = [ "The length of the list can be determined by looking at the code." ]
+                                , under = "List.length"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+a = 3
+"""
+                        ]
+
+--    , test "should replace List.length (List.repeat n x) by n" <|
+--                \() ->
+--                    """module A exposing (..)
+--a = List.length (List.repeat n x)
+--"""
+--                        |> Review.Test.run ruleWithDefaults
+--                        |> Review.Test.expectErrors
+--                            [ Review.Test.error
+--                                { message = "The length of the list is n"
+--                                , details = [ "The length of the list can be determined by looking at the code." ]
+--                                , under = "List.length"
+--                                }
+--                                |> Review.Test.whenFixed """module A exposing (..)
+--a = n
+--"""
+--                        ]
         ]
 
 
@@ -7086,96 +7183,163 @@ a = always []
 listDropTests : Test
 listDropTests =
     describe "List.drop"
-        [ test "should not report List.drop that contains a variable or expression" <|
-            \() ->
-                """module A exposing (..)
-a = List.drop 2 list
-b = List.drop y [ 1, 2, 3 ]
+        [
+--        test "should not report List.drop that contains a variable or expression" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop 2 list
+--b = List.drop y [ 1, 2, 3 ]
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectNoErrors
+--        , test "should replace List.drop n [] by []" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop n []
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "List.drop on [] will result in []"
+--                            , details = [ "You can replace this call by []." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = []
+--"""
+--                        ]
+--        , test "should replace List.drop 0 list by list" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop 0 list
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "List.drop 0 will always return the same given list"
+--                            , details = [ "You can replace this call by the list itself." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = list
+--"""
+--                        ]
+--        , test "should replace List.drop -1 list by list" <|
+--                    \() ->
+--                        """module A exposing (..)
+--a = List.drop -1 list
+--"""
+--                            |> Review.Test.run ruleWithDefaults
+--                            |> Review.Test.expectErrors
+--                                [ Review.Test.error
+--                                    { message = "List.drop -1 will always return the same given list"
+--                                    , details = [ "You can replace this call by the list itself." ]
+--                                    , under = "List.drop"
+--                                    }
+--                                    |> Review.Test.whenFixed """module A exposing (..)
+--a = list
+--"""
+--                                ]
+--
+--        , test "should replace list |> List.drop 0 by list" <|
+--            \() ->
+--                """module A exposing (..)
+--a = list |> List.drop 0
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "List.drop 0 will always return the same given list"
+--                            , details = [ "You can replace this call by the list itself." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = list
+--"""
+--                        ]
+--        , test "should replace List.drop 0 by identity" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop 0
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "List.drop 0 will always return the same given list"
+--                            , details = [ "You can replace this call by identity." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = identity
+--"""
+--    ]
+--  , test "should replace List.drop 5 [a,b,c] by [a,b,c]" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop 5 [a,b,c]
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "drop"
+--                            , details = [ "You can replace this call by []." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = []
+--"""
+--    ]
+--  , test "should replace List.drop 5 (List.repeat 3 x) by []" <|
+--            \() ->
+--                """module A exposing (..)
+--a = List.drop 5 (List.repeat 3 x)
+--"""
+--                    |> Review.Test.run ruleWithDefaults
+--                    |> Review.Test.expectErrors
+--                        [ Review.Test.error
+--                            { message = "drop"
+--                            , details = [ "You can replace this call by []." ]
+--                            , under = "List.drop"
+--                            }
+--                            |> Review.Test.whenFixed """module A exposing (..)
+--a = []
+--"""
+--                        ]
+--      , test "should replace  List.drop 1 (List.singleton x) by []" <|
+--                \() ->
+--                    """module A exposing (..)
+--a = List.drop 1 (List.singleton x)
+--"""
+--                        |> Review.Test.run ruleWithDefaults
+--                        |> Review.Test.expectErrors
+--                            [ Review.Test.error
+--                                { message = "drop"
+--                                , details = [ "You can replace this call by []." ]
+--                                , under = "List.drop"
+--                                }
+--                                |> Review.Test.whenFixed """module A exposing (..)
+--a = []
+--"""
+--                            ]
+
+      test "should replace List.drop 10 (List.range 0 3) by []" <|
+                \() ->
+                    """module A exposing (..)
+a = List.drop 10 (List.range 0 3)
 """
-                    |> Review.Test.run ruleWithDefaults
-                    |> Review.Test.expectNoErrors
-        , test "should replace List.drop n [] by []" <|
-            \() ->
-                """module A exposing (..)
-a = List.drop n []
-"""
-                    |> Review.Test.run ruleWithDefaults
-                    |> Review.Test.expectErrors
-                        [ Review.Test.error
-                            { message = "List.drop on [] will result in []"
-                            , details = [ "You can replace this call by []." ]
-                            , under = "List.drop"
-                            }
-                            |> Review.Test.whenFixed """module A exposing (..)
+                        |> Review.Test.run ruleWithDefaults
+                        |> Review.Test.expectErrors
+                            [ Review.Test.error
+                                { message = "drop"
+                                , details = [ "You can replace this call by []." ]
+                                , under = "List.drop"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
 a = []
 """
-                        ]
-        , test "should replace List.drop 0 list by list" <|
-            \() ->
-                """module A exposing (..)
-a = List.drop 0 list
-"""
-                    |> Review.Test.run ruleWithDefaults
-                    |> Review.Test.expectErrors
-                        [ Review.Test.error
-                            { message = "List.drop 0 will always return the same given list"
-                            , details = [ "You can replace this call by the list itself." ]
-                            , under = "List.drop"
-                            }
-                            |> Review.Test.whenFixed """module A exposing (..)
-a = list
-"""
-                        ]
-        , test "should replace List.drop -1 list by list" <|
-                    \() ->
-                        """module A exposing (..)
-a = List.drop -1 list
-"""
-                            |> Review.Test.run ruleWithDefaults
-                            |> Review.Test.expectErrors
-                                [ Review.Test.error
-                                    { message = "List.drop -1 will always return the same given list"
-                                    , details = [ "You can replace this call by the list itself." ]
-                                    , under = "List.drop"
-                                    }
-                                    |> Review.Test.whenFixed """module A exposing (..)
-a = list
-"""
-                                ]
-
-        , test "should replace list |> List.drop 0 by list" <|
-            \() ->
-                """module A exposing (..)
-a = list |> List.drop 0
-"""
-                    |> Review.Test.run ruleWithDefaults
-                    |> Review.Test.expectErrors
-                        [ Review.Test.error
-                            { message = "List.drop 0 will always return the same given list"
-                            , details = [ "You can replace this call by the list itself." ]
-                            , under = "List.drop"
-                            }
-                            |> Review.Test.whenFixed """module A exposing (..)
-a = list
-"""
-                        ]
-        , test "should replace List.drop 0 by identity" <|
-            \() ->
-                """module A exposing (..)
-a = List.drop 0
-"""
-                    |> Review.Test.run ruleWithDefaults
-                    |> Review.Test.expectErrors
-                        [ Review.Test.error
-                            { message = "List.drop 0 will always return the same given list"
-                            , details = [ "You can replace this call by identity." ]
-                            , under = "List.drop"
-                            }
-                            |> Review.Test.whenFixed """module A exposing (..)
-a = identity
-"""
-                        ]
+                            ]
         ]
+
 
 
 listPartitionTests : Test

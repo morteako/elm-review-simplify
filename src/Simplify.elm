@@ -7133,25 +7133,56 @@ listTakeChecks =
         , unnecessaryCallOnEmptyCheck listCollection
         ]
 
-
+--determineCount
 listDropChecks : CheckInfo -> Maybe (Error {})
 listDropChecks =
     firstThatConstructsJust
         [ \checkInfo ->
             case Evaluate.getInt checkInfo checkInfo.firstArg of
-                Just n ->
-                    if n <= 0 then
+                Just dropCount ->
+                    if dropCount <= 0 then
                         Just
                             (alwaysReturnsLastArgError
-                                (qualifiedToString checkInfo.fn ++ " " ++ String.fromInt n)
+                                (qualifiedToString checkInfo.fn ++ " " ++ String.fromInt dropCount)
                                 { represents = "list" }
                                 checkInfo
                             )
                     else
-                        Nothing
+                        case checkInfo.argsAfterFirst of
+                             [listArg] ->
+                                case (listCollection.elements.determineCount (extractInferResources checkInfo) listArg) of
+                                    Just (Exactly listSize) ->
+                                        if dropCount >= listSize then
+                                            Just
+                                                (Rule.errorWithFix
+                                                    { message = "drop"
+                                                    , details = [ "You can replace this call by []." ]
+                                                    }
+                                                    checkInfo.fnRange
+                                                    [ Fix.replaceRangeBy checkInfo.parentRange "[]" ]
+
+                                            )
+                                            --TAKE VERSION
+                                            --Just (alwaysReturnsLastArgError
+                                            --    (qualifiedToString Fn.List.drop ++ " more elements than in the argument list")
+                                            --    { represents = "list" }
+                                            --    checkInfo
+                                            --
+                                            --)
+                                        else
+                                            Nothing
+
+
+                                    _ -> Nothing
+                             _ ->
+                                Nothing
+
+
+
                 _ ->
                     Nothing
         , unnecessaryCallOnEmptyCheck listCollection
+
         ]
 
 
@@ -9026,6 +9057,48 @@ listDetermineLength resources =
 
                 _ ->
                     Nothing
+        --, \expressionNode ->
+        --            case AstHelpers.removeParens expressionNode of
+        --                Node _ (Expression.OperatorApplication "++" _ left right) ->
+        --                     Maybe.map2 (\a b -> (listDetermineLength resources left) (listDetermineLength resources right)
+        --
+        --                _ ->
+        --                    Nothing
+        , \expressionNode ->
+                expressionNode
+                    |> AstHelpers.getSpecificFnCall Fn.List.repeat resources.lookupTable
+                    |> Maybe.andThen (\x ->
+                        if List.length x.argsAfterFirst == 1 then
+                            Evaluate.getInt resources x.firstArg
+                        else
+                            Nothing
+                    )
+                    |> Maybe.map (\listSize -> Exactly listSize)
+        , \expressionNode ->
+                expressionNode
+                    |> AstHelpers.getSpecificFnCall Fn.List.range resources.lookupTable
+                    |> Maybe.andThen (\x ->
+                        case (traverse (Evaluate.getInt resources) (x.firstArg :: x.argsAfterFirst)) of
+                            Just [start,end] ->
+                                Just (Exactly (max 0 (end - start)))
+                            _ ->
+                                Nothing
+                    )
+        , (\expressionNode ->
+                expressionNode
+                    |> AstHelpers.getSpecificFnCall Fn.List.map resources.lookupTable
+                    |> Maybe.andThen (\x ->
+                        case x.argsAfterFirst of
+                            [listArg] -> listDetermineLength resources listArg
+
+                            _ -> Nothing
+                    ))
+        ,\expressionNode ->
+            expressionNode
+                 |> AstHelpers.getSpecificFnCall Fn.List.reverse resources.lookupTable
+                 |> Maybe.andThen (\reverseCall -> listDetermineLength resources reverseCall.firstArg)
+
+
         ]
 
 
