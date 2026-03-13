@@ -9068,7 +9068,8 @@ listMemberChecks =
             , convertFn = Fn.Set.toList
             , convertedRepresentsIndefinite = "a list"
             , combinedFn = Fn.Set.member
-            }
+            },
+            listReorderOperationsBeforeAreUnnecessaryChecks "member"
         ]
 
 

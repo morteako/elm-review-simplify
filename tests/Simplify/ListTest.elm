@@ -1900,6 +1900,38 @@ a = List.member c <| [ b ]
 a = c == b
 """
                         ]
+        , test "should replace List.member a (List.sortWith f list) by List.member a list" <|
+            \() ->
+                """module A exposing (..)
+a = List.member a (List.sortWith f list)
+"""
+                    |> Review.Test.run ruleWithDefaults
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "Unnecessary List.sortWith before List.member"
+                            , details = [ "Reordering a list does not affect its member. You can replace the List.sortWith call by the unchanged list." ]
+                            , under = "List.member"
+                            }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = List.member a list
+"""
+                        ]
+        , test "should replace List.sortWith f >> List.member a by List.member a" <|
+            \() ->
+                """module A exposing (..)
+a = List.sortWith f >> List.member a
+"""
+                    |> Review.Test.run ruleWithDefaults
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "Unnecessary List.sortWith before List.member"
+                            , details = [ "Reordering a list does not affect its member. You can remove the List.sortWith call." ]
+                            , under = "List.member"
+                            }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = List.member a
+"""
+                        ]
         , test "should replace List.member b [ f a ] by b == (f a)" <|
             \() ->
                 """module A exposing (..)
